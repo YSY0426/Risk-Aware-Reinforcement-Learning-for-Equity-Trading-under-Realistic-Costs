@@ -3,27 +3,37 @@
 import numpy as np
 
 
-def sharpe_ratio(returns, risk_free: float = 0.0, periods_per_year: int = 252):
+def sharpe_ratio(returns, risk_free: float = 0.0, periods: int = 252) -> float:
     """
-    Compute an approximate annualized Sharpe ratio from periodic returns.
-    returns: list or np.ndarray of per-step returns (e.g. daily).
+    年化 Sharpe 比率:
+        SR = (E[R] - R_f) / sigma  （这里 R_f 设为 0 可以简化）
+    returns: 每期收益率（比如日收益率）
+    risk_free: 年化无风险利率（这里默认 0）
+    periods: 一年多少期（股票日频一般 252）
     """
     returns = np.asarray(returns, dtype=float)
-    excess = returns - risk_free
-
-    if excess.std() == 0:
+    if returns.size == 0:
         return 0.0
 
-    return np.sqrt(periods_per_year) * excess.mean() / excess.std()
+    # 简化：risk_free 默认为 0
+    mean = returns.mean()
+    std = returns.std(ddof=1)
+    if std == 0:
+        return 0.0
+
+    ann_ret = mean * periods
+    ann_vol = std * np.sqrt(periods)
+    return float(ann_ret / ann_vol)
 
 
-def max_drawdown(equity_curve):
+def max_drawdown(equity) -> float:
     """
-    Compute maximum drawdown given an equity curve.
-    equity_curve: array-like of cumulative equity values (start from 1.0).
-    Return is a negative number, e.g. -0.25 for -25%.
+    最大回撤 (max drawdown)，返回一个<=0的值（比如 -0.25 代表 -25%）。
     """
-    equity_curve = np.asarray(equity_curve, dtype=float)
-    running_max = np.maximum.accumulate(equity_curve)
-    drawdowns = (equity_curve - running_max) / running_max
-    return float(drawdowns.min())
+    equity = np.asarray(equity, dtype=float)
+    if equity.size == 0:
+        return 0.0
+
+    running_max = np.maximum.accumulate(equity)
+    drawdown = equity / running_max - 1.0
+    return float(drawdown.min())
