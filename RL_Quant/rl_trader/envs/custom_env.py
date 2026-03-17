@@ -113,14 +113,17 @@ class CustomTradingEnv(gym.Env):
         turnover = abs(self.position - self.prev_position)
         cost = self.trading_cost * turnover
 
-        # 风险惩罚：仓位越大惩罚越大（很简单但好解释）
+        # 风险惩罚：只用于训练 reward，不直接扣进真实资金曲线
         risk_penalty = self.risk_lambda * abs(self.position)
 
-        # 奖励 = 净收益
-        reward = portfolio_return - cost - risk_penalty
+        # 真实交易净收益（只扣交易成本）
+        pnl_after_cost = portfolio_return - cost
 
-        # 更新权益曲线
-        self.equity *= (1.0 + reward)
+    # PPO 训练用 reward
+        reward = pnl_after_cost - risk_penalty
+
+        # 更新真实资金曲线：不要把 risk_penalty 扣进去
+        self.equity *= (1.0 + pnl_after_cost)
         self.max_equity = max(self.max_equity, self.equity)
 
         self.current_step += 1
